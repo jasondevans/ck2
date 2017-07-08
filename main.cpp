@@ -1,28 +1,50 @@
 #include <iostream>
 
 #ifdef WIN32
-#include <windows.h>
+  #include <windows.h>
 #else
-#include <unistd.h>
-#include <termios.h>
+  #include <unistd.h>
+  #include <termios.h>
 #endif
 
 #include "sqlite3.h"
+#include "Util.h"
+#include "UtilException.h"
+#include "Site.h"
 
 
 // Turn stdin echo on or off
 void setEcho(bool enable);
 
 
-int main()
+int main(int argc, char* argv[])
 {
     // Use std here
     using namespace std;
 
-    cout << "Welcome to Cipher Kick!\n\nPlease enter key string: ";
+    // Use CipherKick namespace
+    using namespace CipherKick;
+
+    // Our search results
+    auto search_results = make_shared<vector<Site>>();
+
+    // Our max site id
+    int max_site_id;
+
+    // Check arguments
+    if (argc != 2)
+    {
+        // Invalid number of arguments, print usage and exit
+        cout << "Usage: ck2 vault_file" << endl;
+        return 1;
+    }
+
+    cout << "Welcome to Cipher Kick!\n\nPlease enter key: ";
 
     // Turn off echo to read password
     setEcho(false);
+
+    // TODO: Handle in-memory password more mindfully
 
     // Read password
     string keystr;
@@ -31,9 +53,215 @@ int main()
     // Turn echo back on
     setEcho(true);
 
-    string pragma_str = "PRAGMA key = '" + keystr + "'";
+    // Open and decrypt the database
+    CipherKick::Util& util = CipherKick::Util::getInstance();
+    try {
+        util.openDbFile(argv[1], keystr);
+    }
+    catch (UtilException ue) {
+        cout << endl << "Failed to open database:" << endl;
+        cout << ue.what() << endl;
+        return 1;
+    }
 
-    cout << pragma_str << endl;
+    // TODO: Clear password string from memory
+
+    cout << endl << "Database decrypted." << endl;
+
+    // Keep looping until exit.
+    string command_str { "" };
+    cout << "\n\n[s = search | n = new | q = quit]: ";
+    getline(cin, command_str);
+    while (true)
+    {
+        if (command_str.compare("q") == 0) break;
+        /*else if (command_str.compare("n") == 0)
+        {
+            Site new_site;
+            cout << "\n[name]: ";
+            getline(cin, new_site.name);
+            cout << "\n[url]: ";
+            getline(cin, new_site.url);
+            cout << "\n[user]: ";
+            getline(cin, new_site.user);
+            cout << "\n[password]: ";
+            getline(cin, new_site.password);
+            cout << "\n[notes]: ";
+            getline(cin, new_site.notes);
+            new_site.version = 1;
+
+            // Get the current max site id.
+            max_site_id = 0;
+            string site_id_str = "select max(site_id) from sites;";
+            if (sqlite3_exec(db, (const char*)site_id_str.c_str(), callback_max_site_id, NULL, NULL) != SQLITE_OK)
+                cout << "\nError finding max site id.\n";
+            max_site_id = max(0, max_site_id);
+
+            string insert_str = "insert into sites (site_id, name, url, user, password, notes, version) "
+                                        "values (" + to_string(max_site_id + 1) + ", '" + new_site.name + "', '" +
+                                "" + new_site.url + "', '" + new_site.user + "', '" + new_site.password + "', '" +
+                                "" + new_site.notes + "', " + to_string(new_site.version) + ");";
+            if (sqlite3_exec(db, (const char *) insert_str.c_str(), NULL, NULL, NULL) != SQLITE_OK)
+                cout << "\nError inserting site.\n";
+            else
+                cout << "\nSite added successfully.\n";
+        }*/
+        else if (command_str.compare("s") == 0)
+        {
+            string search_str("");
+            cout << "\n[search string]: ";
+            getline(cin, search_str);
+            while (true)
+            {
+                if (search_str.compare("") == 0) break;
+                else
+                {
+                    // Clear list of search results.
+                    search_results->clear();
+
+                    try
+                    {
+                        search_results = util.search(search_str);
+                    }
+                    catch (UtilException ue)
+                    {
+                        cout << "An error occurred.\n";
+                    }
+
+                    if (search_results->size() == 0)
+                    {
+                        cout << "\nNo records found.\n";
+                    }
+                    else
+                    {
+                        cout << "\nRecords:\n";
+                        for (std::vector<Site>::size_type i = 0; i != search_results->size(); i++)
+                        {
+                            cout << i + 1 << ". " << search_results->at(i).name << "\n";
+                        }
+
+                        if (search_results->size() == 1)
+                        {
+                            try {
+                                auto current_site = util.getSite(search_results->at(0).siteId);
+
+                                cout << endl << "id = " << current_site->id;
+                                cout << endl << "\nsite_id = " << current_site->siteId;
+                                cout << "\nname = " << current_site->name;
+                                cout << "\nurl = " << current_site->url;
+                                cout << "\nuser = " << current_site->user;
+                                cout << "\npassword = " << current_site->password;
+                                cout << "\nnotes = " << current_site->notes;
+                                cout << "\nversion = " << current_site->version;
+                                cout << "\n";
+                            }
+                            catch (UtilException ue) {
+                                cout << "ERROR!" << endl;
+                                return 1;
+                            }
+
+                            string detail_command_str("");
+                            cout << "\n[cu = copy user | cp = copy pw | v = view | e = edit]: ";
+                            getline(cin, detail_command_str);
+                            while (true)
+                            {
+                                if (detail_command_str.compare("") == 0) break;
+                                else if (detail_command_str.compare("cu") == 0)
+                                {
+                                    // Copy the user to the clipboard.
+                                    
+                                    /*
+                                    const char* output = current_site.user.c_str();
+                                    const size_t len = strlen(output) + 1;
+                                    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, len);
+                                    memcpy(GlobalLock(hMem), output, len);
+                                    GlobalUnlock(hMem);
+                                    OpenClipboard(0);
+                                    EmptyClipboard();
+                                    SetClipboardData(CF_TEXT, hMem);
+                                    CloseClipboard();
+                                    */
+                                    cout << endl << "User copied to the clipboard." << endl;
+                                }
+                                else if (detail_command_str.compare("cp") == 0)
+                                {
+                                    // Copy the password to the clipboard.
+                                    /*
+                                    const char* output = current_site.password.c_str();
+                                    const size_t len = strlen(output) + 1;
+                                    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, len);
+                                    memcpy(GlobalLock(hMem), output, len);
+                                    GlobalUnlock(hMem);
+                                    OpenClipboard(0);
+                                    EmptyClipboard();
+                                    SetClipboardData(CF_TEXT, hMem);
+                                    CloseClipboard();
+                                    */
+                                    cout << endl << "Password copied to the clipboard." << endl;
+                                }
+                                else if (detail_command_str.compare("v") == 0)
+                                {
+                                    /*
+                                    cout << "\nid = " << current_site.id;
+                                    cout << "\nsite_id = " << current_site.site_id;
+                                    cout << "\nname = " << current_site.name;
+                                    cout << "\nurl = " << current_site.url;
+                                    cout << "\nuser = " << current_site.user;
+                                    cout << "\npassword = " << current_site.password;
+                                    cout << "\nnotes = " << current_site.notes;
+                                    cout << "\nversion = " << current_site.version;
+                                    cout << "\n";
+                                    */
+                                    cout << endl << "Viewing site." << endl;
+                                }
+                                /*
+                                else if (detail_command_str.compare("e") == 0)
+                                {
+                                    site edited_site;
+                                    cout << "\n[name]: ";
+                                    edited_site.name = GetInputDefault(current_site.name, cout);
+                                    cout << "\n[url]: ";
+                                    edited_site.url = GetInputDefault(current_site.url, cout);
+                                    cout << "\n[user]: ";
+                                    edited_site.user = GetInputDefault(current_site.user, cout);
+                                    cout << "\n[password]: ";
+                                    edited_site.password = GetInputDefault(current_site.password, cout);
+                                    cout << "\n[notes]: ";
+                                    edited_site.notes = GetInputDefault(current_site.notes, cout);
+                                    edited_site.site_id = current_site.site_id;
+                                    edited_site.version = current_site.version + 1;
+                                    cout << "\n";
+
+                                    string insert_str = "insert into sites (site_id, name, url, user, password, notes, version) "
+                                                                "values (" + to_string(edited_site.site_id) + ", '" + edited_site.name + "', '" +
+                                                        "" + edited_site.url + "', '" + edited_site.user + "', '"
+                                                                "" + edited_site.password + "', '" + edited_site.notes + "', " +
+                                                        "" + to_string(edited_site.version) + ");";
+                                    if (sqlite3_exec(db, (const char *) insert_str.c_str(), NULL, NULL, NULL) != SQLITE_OK)
+                                    {
+                                        cout << "\nError inserting site.\n";
+                                    }
+                                    else
+                                    {
+                                        cout << "\nSite edited successfully.\n";
+                                    }
+                                    break;
+                                }
+                                */
+                                cout << "\n[cu = copy user | cp = copy pw | v = view | e = edit]: ";
+                                getline(cin, detail_command_str);
+                            }
+                        }
+                    }
+
+                }
+                cout << "\n[search string]: ";
+                getline(cin, search_str);
+            }
+        }
+        cout << "\n[s = search | n = new | q = quit]: ";
+        getline(cin, command_str);
+    }
 
     // Return success
     return 0;
