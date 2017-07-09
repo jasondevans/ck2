@@ -123,6 +123,9 @@ int main(int argc, char* argv[])
                     // Clear list of search results.
                     search_results->clear();
 
+                    // Create a variable for the current site
+                    std::shared_ptr<CipherKick::Site> current_site { nullptr };
+
                     try
                     {
                         search_results = util.search(search_str);
@@ -138,25 +141,42 @@ int main(int argc, char* argv[])
                     }
                     else
                     {
-                        cout << "\nRecords:\n";
-                        for (std::vector<Site>::size_type i = 0; i != search_results->size(); i++)
-                        {
-                            cout << i + 1 << ". " << search_results->at(i).name << "\n";
-                        }
-
                         if (search_results->size() == 1)
                         {
-                            std::shared_ptr<CipherKick::Site> current_site { nullptr };
-
-                            try {
-                                current_site = util.getSite(search_results->at(0).siteId);
+                            current_site = util.getSite(search_results->at(0).siteId);
+                        }
+                        else // search_results->size() > 1
+                        {
+                            cout << "\nRecords:\n";
+                            for (std::vector<Site>::size_type i = 0; i != search_results->size(); i++)
+                            {
+                                cout << i + 1 << ". " << search_results->at(i).name << "\n";
                             }
-                            catch (UtilException ue) {
-                                cout << "ERROR!" << endl;
-                                return 1;
+                            
+                            string number_command_str { "" };
+                            int record_num { -1 };
+                            cout << endl << "[record number to select]: ";
+                            getline(cin, number_command_str);
+                            while (true)
+                            {
+                                if (number_command_str.compare("") == 0) break;
+                                try { record_num = std::stoi(number_command_str) - 1; }
+                                catch (const std::invalid_argument& e) { }
+                                catch (const std::out_of_range& e) { }
+                                if (record_num >= 0 && record_num < search_results->size())
+                                {
+                                    current_site = util.getSite(search_results->at(record_num).siteId);
+                                    break;
+                                }
+                                cout << endl << "[record number to select]: ";
+                                getline(cin, number_command_str);
                             }
+                        }
 
+                        if (current_site) // a current site has been selected successfully
+                        {
                             string detail_command_str("");
+                            cout << endl << "[" << current_site->name << "]";
                             cout << endl << "[cu = copy user | cp = copy pw | v = view | e = edit]: ";
                             getline(cin, detail_command_str);
                             while (true)
@@ -221,6 +241,7 @@ int main(int argc, char* argv[])
                                     break;
                                 }
                                 */
+                                cout << endl << "[" << current_site->name << "]";
                                 cout << "\n[cu = copy user | cp = copy pw | v = view | e = edit]: ";
                                 getline(cin, detail_command_str);
                             }
