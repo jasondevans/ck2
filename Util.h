@@ -60,6 +60,9 @@ namespace CipherKick {
         // Get a specific site.
         std::shared_ptr<CipherKick::Site> getSite(int siteId);
 
+        // Copy to the clipboard
+        void copyToClipboard(const std::string& text);
+
         // Save a site.
         // int saveSite(Site^ site);
 

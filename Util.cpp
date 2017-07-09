@@ -345,6 +345,55 @@ std::shared_ptr<CipherKick::Site> Util::getSite(int siteId)
 }
 
 
+// Copy to the clipboard
+void Util::copyToClipboard(const std::string& text)
+{
+    // Array for pipe file descriptors
+    int pipefds[2];
+
+    // Create our pipe
+    if (pipe(pipefds) == -1)
+        perror("Error creating pipe");
+
+    if ((fork()) == 0) {
+
+        /* This is the child process */
+
+        /* Close write end of the pipe */
+        if (close(pipefds[1]) == -1)
+            perror("Error closing child's write end of the pipe");
+
+        /* Close stdin, and reopen bound to read end of pipe; close duplicate fd */
+        if (pipefds[0] != STDIN_FILENO) {
+            if (dup2(pipefds[0], STDIN_FILENO) == -1)
+                perror("Error reopening child's stdin bound to read end of pipe");
+            if (close(pipefds[0]) == -1)
+                perror("Error closing child's duplicate pipe read fd");
+        }
+
+        /* Over-write the child process with the pbcopy binary */
+        execlp("pbcopy", "pbcopy", NULL);
+        perror("Could not exec pbcopy");
+        exit(1);
+    }
+
+    /* This is the parent process */
+
+    /* Close read end of the pipe */
+    if (close(pipefds[0]) == -1)
+        perror("Error closing parent's read end of the pipe");
+
+    // printf("<- %s", data);
+    /* Write some data to the child's input */
+    write(pipefds[1], text.c_str(), strlen(text.c_str()));
+
+    /* We're done, so close our write end of the pipe */
+    if (close(pipefds[1]) == -1)
+        perror("Error closing parent's write end of the pipe");
+
+}
+
+
 // Save a site.
 /*
 int Util::saveSite(Site^ site)

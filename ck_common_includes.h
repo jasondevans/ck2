@@ -6,6 +6,10 @@
 #include <memory.h>
 #include <time.h>
 #include <math.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
 
 // Additional headers
 #include <iostream>

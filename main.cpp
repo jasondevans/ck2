@@ -66,15 +66,19 @@ int main(int argc, char* argv[])
 
     // TODO: Clear password string from memory
 
-    cout << endl << "Database decrypted." << endl;
+    cout << endl << endl << "Database decrypted -- you're in!";
 
     // Keep looping until exit.
     string command_str { "" };
-    cout << "\n\n[s = search | n = new | q = quit]: ";
+    cout << endl << endl << "[s = search | n = new | q = quit]: ";
     getline(cin, command_str);
     while (true)
     {
-        if (command_str.compare("q") == 0) break;
+        if (command_str.compare("q") == 0)
+        {
+            cout << endl << "Later skater!" << endl << endl;
+            break;
+        }
         /*else if (command_str.compare("n") == 0)
         {
             Site new_site;
@@ -142,18 +146,10 @@ int main(int argc, char* argv[])
 
                         if (search_results->size() == 1)
                         {
-                            try {
-                                auto current_site = util.getSite(search_results->at(0).siteId);
+                            std::shared_ptr<CipherKick::Site> current_site { nullptr };
 
-                                cout << endl << "id = " << current_site->id;
-                                cout << endl << "\nsite_id = " << current_site->siteId;
-                                cout << "\nname = " << current_site->name;
-                                cout << "\nurl = " << current_site->url;
-                                cout << "\nuser = " << current_site->user;
-                                cout << "\npassword = " << current_site->password;
-                                cout << "\nnotes = " << current_site->notes;
-                                cout << "\nversion = " << current_site->version;
-                                cout << "\n";
+                            try {
+                                current_site = util.getSite(search_results->at(0).siteId);
                             }
                             catch (UtilException ue) {
                                 cout << "ERROR!" << endl;
@@ -161,7 +157,7 @@ int main(int argc, char* argv[])
                             }
 
                             string detail_command_str("");
-                            cout << "\n[cu = copy user | cp = copy pw | v = view | e = edit]: ";
+                            cout << endl << "[cu = copy user | cp = copy pw | v = view | e = edit]: ";
                             getline(cin, detail_command_str);
                             while (true)
                             {
@@ -169,50 +165,27 @@ int main(int argc, char* argv[])
                                 else if (detail_command_str.compare("cu") == 0)
                                 {
                                     // Copy the user to the clipboard.
+                                    util.copyToClipboard(current_site->user);
                                     
-                                    /*
-                                    const char* output = current_site.user.c_str();
-                                    const size_t len = strlen(output) + 1;
-                                    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, len);
-                                    memcpy(GlobalLock(hMem), output, len);
-                                    GlobalUnlock(hMem);
-                                    OpenClipboard(0);
-                                    EmptyClipboard();
-                                    SetClipboardData(CF_TEXT, hMem);
-                                    CloseClipboard();
-                                    */
                                     cout << endl << "User copied to the clipboard." << endl;
                                 }
                                 else if (detail_command_str.compare("cp") == 0)
                                 {
                                     // Copy the password to the clipboard.
-                                    /*
-                                    const char* output = current_site.password.c_str();
-                                    const size_t len = strlen(output) + 1;
-                                    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, len);
-                                    memcpy(GlobalLock(hMem), output, len);
-                                    GlobalUnlock(hMem);
-                                    OpenClipboard(0);
-                                    EmptyClipboard();
-                                    SetClipboardData(CF_TEXT, hMem);
-                                    CloseClipboard();
-                                    */
+                                    util.copyToClipboard(current_site->password);
+
                                     cout << endl << "Password copied to the clipboard." << endl;
                                 }
                                 else if (detail_command_str.compare("v") == 0)
                                 {
-                                    /*
-                                    cout << "\nid = " << current_site.id;
-                                    cout << "\nsite_id = " << current_site.site_id;
-                                    cout << "\nname = " << current_site.name;
-                                    cout << "\nurl = " << current_site.url;
-                                    cout << "\nuser = " << current_site.user;
-                                    cout << "\npassword = " << current_site.password;
-                                    cout << "\nnotes = " << current_site.notes;
-                                    cout << "\nversion = " << current_site.version;
-                                    cout << "\n";
-                                    */
-                                    cout << endl << "Viewing site." << endl;
+                                    cout << endl << "site_id = " << current_site->siteId;
+                                    cout << endl << "name = " << current_site->name;
+                                    cout << endl << "url = " << current_site->url;
+                                    cout << endl << "user = " << current_site->user;
+                                    cout << endl << "password = " << "**********";
+                                    cout << endl << "notes = " << current_site->notes;
+                                    cout << endl << "version = " << current_site->version;
+                                    cout << endl;
                                 }
                                 /*
                                 else if (detail_command_str.compare("e") == 0)
