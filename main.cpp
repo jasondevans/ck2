@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    cout << "Welcome to Cipher Kick!\n\nPlease enter key: ";
+    cout << endl << "Welcome to Cipher Kick!\n\nPlease enter key: ";
 
     // Turn off echo to read password
     setEcho(false);
